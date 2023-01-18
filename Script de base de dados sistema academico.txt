@@ -1,0 +1,618 @@
+-CRIANDO O BANCO DE DADOS
+USE MASTER 
+GO
+
+if(db_id('sistema') is not null)
+DROP DATABASE sistema
+CREATE DATABASE sistema
+GO
+USE sistema
+GO
+
+
+--CRIANDO AS TABELAS
+create table usuario(
+nome varchar(30),
+senha varchar(50)
+)
+
+
+create table aluno(
+cpf varchar(20)PRIMARY KEY,
+nome varchar(30)NOT NULL,
+sobrenome varchar(30),
+idade TINYINT,
+sexo CHAR(1)NOT NULL CHECK(sexo IN ('M', 'F')),
+endereco varchar(100),
+data_nasc DATE 
+)
+GO
+
+
+create table materia(
+id_materia INT IDENTITY(1, 1)PRIMARY KEY,
+materia varchar (30) not null
+)
+
+
+create table professor(
+cpf varchar(20)PRIMARY KEY,
+nome varchar(30)NOT NULL,
+sobrenome varchar(30),
+idade TINYINT,
+sexo CHAR(1)NOT NULL CHECK(sexo IN ('M', 'F')),
+endereco varchar(100),
+email varchar(50),
+telefone varchar(15),
+data_nasc DATE,
+id_materia INT FOREIGN KEY REFERENCES materia
+)
+GO
+
+
+
+create table ano_escolar(
+num_ano CHAR(4)PRIMARY KEY,
+data_inicial date not null,
+data_final date not null
+)
+GO
+
+
+create table aulas(
+cod_aula int Identity(1,1)PRIMARY KEY,
+capacidade int not null,
+vagas int not null
+)
+GO
+
+
+CREATE TABLE matricula
+(
+num_matricula INT IDENTITY(1,1) PRIMARY KEY,
+data DATE NOT NULL,
+valor SMALLMONEY CHECK(valor>0.00)NOT NULL,
+turma TINYINT CHECK(turma between 1 AND 3) NOT NULL,
+serie CHAR(1)NOT NULL CHECK(serie IN('A','B')),
+cod_aula Int FOREIGN KEY REFERENCES aulas,
+cpf VARCHAR(20) FOREIGN KEY REFERENCES aluno,
+num_ano CHAR(4)  FOREIGN KEY REFERENCES ano_escolar,
+)
+GO
+
+
+
+CREATE TABLE curso
+(cod_curso CHAR(5) PRIMARY KEY,
+nome VARCHAR(45) NOT NULL,
+)
+GO
+
+CREATE TABLE trimestre
+(cod_trimestre INT IDENTITY(1,1) PRIMARY KEY,
+descricao VARCHAR (30) NOT NULL
+)
+GO
+
+CREATE TABLE notas
+(cod_notas INT IDENTITY(1,1) PRIMARY KEY,
+nota DECIMAL CHECK(NOTA>=0 AND NOTA<=10 ),
+descricao VARCHAR (30) NOT NULL,
+id_curso CHAR(5) FOREIGN KEY REFERENCES CURSO,
+cpf VARCHAR(20) FOREIGN KEY REFERENCES ALUNO,
+id_trimestre INT FOREIGN KEY REFERENCES TRIMESTRE
+)
+GO
+
+
+
+
+
+
+-- INSERÇÃO DE REGISTROS NA TABELA USUARIO
+insert into usuario values(
+'Admin', '123456')
+insert into usuario values(
+'Professor', '123456')
+insert into usuario values(
+'Secretaria', '123456')
+
+
+-- INSERÇÃO DE REGISTROS NA TABELA MATERIA
+INSERT INTO materia VALUES ('Programação WEB')
+INSERT INTO materia VALUES ('Programação Desktop')
+INSERT INTO materia VALUES ('Programação de Jogos')
+INSERT INTO materia VALUES ('Design Gráfico')
+INSERT INTO materia VALUES ('WEB Design')
+INSERT INTO materia VALUES ('Edição de Vídeos')
+INSERT INTO materia VALUES ('Redes')
+
+
+-- INSERÇÃO DE REGISTROS NA TABELA AULAS
+INSERT INTO aulas VALUES (30,30)
+INSERT INTO aulas VALUES (30,30)
+INSERT INTO aulas VALUES (30,30)
+
+
+-- INSERÇÃO DE REGISTROS NA TABELA CURSOS
+INSERT INTO curso VALUES ('WEB01', 'HTML')
+INSERT INTO curso VALUES ('DES02', 'JAVA')
+INSERT INTO curso VALUES ('JOG03', 'PYGAME')
+INSERT INTO curso VALUES ('DES04', 'PHOTOSHOP')
+INSERT INTO curso VALUES ('WDE05', 'CSS')
+INSERT INTO curso VALUES ('EDC06', 'PREMIERE')
+INSERT INTO curso VALUES ('RED07', 'WINDOWS SERVER')
+
+
+
+
+-- INSERÇÃO DE REGISTROS NA TABELA TRIMESTRE
+INSERT INTO TRIMESTRE VALUES('Primeiro Trimestre')
+INSERT INTO TRIMESTRE VALUES('Segundo Trimestre')
+INSERT INTO TRIMESTRE VALUES('Terceiro Trimestre')
+
+GO
+
+
+
+
+
+
+--CRIAÇÃO DOS PROCEDIMENTOS
+
+
+--PROCEDIMENTOS DO LOGIN
+GO
+create proc iniciarSessao(
+@Nome varchar(30),
+@Senha varchar(50),
+@Msg varchar(100)output
+)
+as
+begin
+if(not exists(select * from usuario where 
+nome=@Nome and senha=@Senha))
+set
+@msg='Dados incorretos'
+else
+begin
+set @msg='Bem Vindo Sr(a): ' + @Nome
+end
+end
+GO
+
+
+
+
+--PROCEDIMENTOS DOS ALUNOS
+create proc registrarAluno
+@CPF VARCHAR(20),
+@NOME VARCHAR(30),
+@SOBRENOME VARCHAR(50),
+@IDADE TINYINT,
+@SEXO CHAR(1),
+@ENDERECO VARCHAR(50),
+@DATA_NASCIMENTO DATE,
+@MENSAGEM VARCHAR(100) OUTPUT
+AS 
+BEGIN
+IF(EXISTS(SELECT*FROM aluno WHERE cpf=@CPF))
+SET @MENSAGEM='Número do CPF: '+ @CPF +' Já está registrado'
+ELSE
+BEGIN
+INSERT INTO aluno VALUES(@CPF,@NOME,@SOBRENOME,@IDADE,@SEXO,@ENDERECO,@DATA_NASCIMENTO)
+SET @MENSAGEM='Aluno registrado com sucesso!'
+END
+END
+GO
+
+
+
+CREATE PROC BuscarCPFAluno
+@CPF VARCHAR(20)
+AS BEGIN
+SELECT * FROM aluno WHERE cpf LIKE @CPF+'%'
+END
+GO
+
+CREATE PROC BuscarNomeAluno
+@Nome VARCHAR(60)
+AS BEGIN 
+SELECT * FROM aluno WHERE nome LIKE @Nome+'%'
+end
+GO
+
+
+
+
+CREATE PROC EditarAluno
+@CPF VARCHAR(20),
+@NOME VARCHAR(30),
+@SOBRENOME VARCHAR(50),
+@IDADE TINYINT,
+@SEXO CHAR(1),
+@ENDERECO VARCHAR(50),
+@DATA_NASCIMENTO DATE,
+@MENSAGEM VARCHAR(100) OUTPUT
+AS 
+BEGIN
+UPDATE aluno SET nome=@NOME,sobrenome=@SOBRENOME,idade=@IDADE,
+				sexo=@SEXO,endereco=@ENDERECO,data_nasc=@DATA_NASCIMENTO WHERE cpf=@CPF
+SET @MENSAGEM='Dados Atualizados'
+END
+GO
+
+
+--PROCEDIMENTOS DOS PROFESSORES
+create proc registrarProfessor
+@CPF VARCHAR(20),
+@NOME VARCHAR(30),
+@SOBRENOME VARCHAR(50),
+@IDADE TINYINT,
+@SEXO CHAR(1),
+@ENDERECO VARCHAR(50),
+@EMAIL VARCHAR(50),
+@TELEFONE VARCHAR(20),
+@DATA_NASCIMENTO DATE,
+@ID_MATERIA INT,
+@MENSAGEM VARCHAR(100) OUTPUT
+AS 
+BEGIN
+IF(EXISTS(SELECT*FROM professor WHERE cpf=@CPF))
+SET @MENSAGEM='Número do CPF: '+ @CPF +' Já está registrado'
+ELSE
+BEGIN
+INSERT INTO professor VALUES(@CPF,@NOME,@SOBRENOME,@IDADE,@SEXO,@ENDERECO,@EMAIL, @TELEFONE, @DATA_NASCIMENTO, @ID_MATERIA)
+SET @MENSAGEM='Professor registrado com sucesso!'
+END
+END
+GO
+
+
+
+CREATE PROC BuscarCPFProfessor
+@CPF VARCHAR(20)
+AS BEGIN
+SELECT * FROM professor WHERE cpf LIKE @CPF+'%'
+END
+GO
+
+CREATE PROC BuscarNomeProfessor
+@Nome VARCHAR(60)
+AS BEGIN 
+SELECT * FROM professor WHERE nome LIKE @Nome+'%'
+end
+GO
+
+
+
+
+CREATE PROC EditarProfessor
+@CPF VARCHAR(20),
+@NOME VARCHAR(30),
+@SOBRENOME VARCHAR(50),
+@IDADE TINYINT,
+@SEXO CHAR(1),
+@ENDERECO VARCHAR(50),
+@EMAIL VARCHAR(50),
+@TELEFONE VARCHAR(20),
+@DATA_NASCIMENTO DATE,
+@ID_MATERIA INT,
+@MENSAGEM VARCHAR(100) OUTPUT
+AS 
+BEGIN
+UPDATE professor SET nome=@NOME,sobrenome=@SOBRENOME,idade=@IDADE,
+				sexo=@SEXO,endereco=@ENDERECO,telefone=@TELEFONE,email=@EMAIL,data_nasc=@DATA_NASCIMENTO, id_materia=@ID_MATERIA WHERE cpf=@CPF
+SET @MENSAGEM='Dados Atualizados'
+END
+GO
+
+
+
+
+
+create proc registrarMateria
+@Nome VARCHAR(100),
+@MENSAGEM VARCHAR(100) OUTPUT
+AS 
+BEGIN
+
+INSERT INTO materia VALUES(@Nome)
+SET @MENSAGEM='Materia registrada com sucesso!'
+END
+
+GO
+
+
+
+CREATE PROC BuscarMateria
+@Nome VARCHAR(60)
+AS BEGIN 
+SELECT * FROM materia WHERE materia LIKE @Nome+'%'
+end
+GO
+
+
+
+
+create proc registrarAno
+@Ano VARCHAR(20),
+@DataInicial date,
+@DataFinal date,
+@MENSAGEM VARCHAR(100) OUTPUT
+AS 
+BEGIN
+IF(EXISTS(SELECT*FROM ano_escolar WHERE num_ano=@Ano))
+SET @MENSAGEM='Ano: '+ @Ano +' Já está registrado'
+ELSE
+BEGIN
+INSERT INTO ano_escolar VALUES(@Ano,@DataInicial,@DataFinal)
+SET @MENSAGEM='Ano registrado com sucesso!'
+END
+END
+GO
+
+
+
+
+CREATE PROC registrarMatricula
+@DATA DATE,
+@VALOR SMALLMONEY,
+@TURMA TINYINT,
+@SERIE CHAR(1),
+@COD_AULA Int,
+@CPF_ALUNO CHAR(8),
+@NUM_ANO CHAR(4),
+@MENSAGEM VARCHAR(100) OUTPUT
+AS 
+declare @VagaLivre INT 
+BEGIN
+IF (EXISTS(SELECT*FROM MATRICULA WHERE cpf=@CPF_ALUNO AND num_ano=@NUM_ANO))
+SET @MENSAGEM='Aluno já Matriculado'
+ELSE BEGIN
+IF( NOT EXISTS(Select * from aluno where cpf=@CPF_ALUNO))
+set @MENSAGEM='Aluno não cadastrado'
+else begin
+INSERT INTO MATRICULA VALUES(@DATA,@VALOR,@TURMA,@SERIE ,@COD_AULA ,@CPF_ALUNO,@NUM_ANO)
+SET @MENSAGEM='Matrícula Registrada'
+Update AULAS set vagas=vagas-1 where cod_aula=@COD_AULA
+END
+END
+END
+GO
+
+
+
+
+CREATE Proc BuscarVagas(
+@codaula int,
+@vagas int output
+)
+as
+begin
+set @vagas=(select vagas
+from  AULAS where cod_aula=@codaula)
+end
+go
+
+
+
+
+
+CREATE PROC buscar_matricula
+@CPF_ALUNO VARCHAR(20),
+@MENSAGEM VARCHAR(100) OUTPUT
+AS BEGIN
+SELECT * FROM matricula WHERE cpf=@CPF_ALUNO
+SET @MENSAGEM='Dados Encontrados'
+END
+GO
+
+
+
+
+Create PROC editar_matricula
+@DATA DATE,
+@VALOR SMALLMONEY,
+@TURMA TINYINT ,
+@SERIE CHAR(1),
+@COD_AULA Int,
+@CPF_ALUNO CHAR(8),
+@NUM_ANO CHAR(4),
+@MENSAGEM VARCHAR(100) OUTPUT
+AS BEGIN
+If(Not exists(Select * from aluno where cpf=@CPF_ALUNO))
+set @MENSAGEM='Aluno não registrado!'
+else begin
+UPDATE matricula SET data=@DATA,valor=@VALOR,turma=@TURMA,serie=@SERIE,cod_aula=@COD_AULA,num_ano=@NUM_ANO
+WHERE cpf=@CPF_ALUNO
+SET @MENSAGEM='Dados Atualizados'
+END
+End
+GO
+
+
+
+
+CREATE Proc BuscarAlunoMat 
+@turma int
+as
+begin
+Select A.nome as 'nome'  ,M.turma as 'turma' ,M.serie as 'serie'
+from aluno A inner join matricula M on A.cpf=M.cpf 
+Where M.turma=@turma
+end
+go
+
+
+
+
+
+CREATE Proc BuscarVagasAlunos(
+@codaula int,
+@vagas int output
+)
+as
+begin
+Select capacidade from aulas where cod_aula=@codaula
+set @vagas=(select vagas
+from  aulas where cod_aula=@codaula)
+end
+go
+
+
+
+
+
+
+ CREATE PROC consultar_matricula_ano
+ (@DATA CHAR(4))
+ AS
+ BEGIN
+ SELECT COUNT(*) AS 'Quantidade de Matriculas',SUM(valor) AS 'Total Matriculado' FROM MATRICULA
+ WHERE YEAR(data)=@DATA
+ GROUP BY valor
+ END
+ GO
+
+
+
+ CREATE PROC consultar_matricula_dia
+ (@DIA DATE)
+ AS
+ BEGIN
+ SELECT COUNT(*) AS 'Quantidade de Matriculas',SUM(valor) AS 'Total Matriculado' FROM MATRICULA
+ WHERE data=@DIA
+ END
+ GO
+
+
+
+
+
+ 
+CREATE PROC REGISTRAR_NOTAS
+@NOTA DECIMAL,
+@DESCRICAO VARCHAR(30),
+@ID_CURSO CHAR(5),
+@CPF_ALUNO CHAR(8),
+@ID_TRIMESTRE INT,
+@MENSAGEM VARCHAR(100) OUTPUT
+AS 
+DECLARE @QUANT_NOTAS INT
+BEGIN
+SET @QUANT_NOTAS=(SELECT COUNT(*) FROM NOTAS WHERE Id_Curso=@ID_CURSO AND CPF=@cpf_ALUNO AND Id_Trimestre=@ID_TRIMESTRE)
+IF(@QUANT_NOTAS>=3)
+SET @MENSAGEM='Somente 3 notas por Curso'
+ELSE
+BEGIN
+INSERT INTO NOTAS VALUES(@NOTA,@DESCRIcao,@ID_CURSO,@CPF_ALUNO,@ID_TRIMESTRE)
+SET @MENSAGEM='Registrado Ok'
+END
+END
+GO
+
+
+
+
+CREATE PROC GERAR_CODIGO_NOTAS
+@ID_NTA INT OUTPUT
+AS BEGIN
+SET @ID_NTA=(SELECT COUNT(Cod_Notas)+1 FROM NOTAS)
+END
+GO
+
+
+
+
+CREATE PROC BUSCAR_NOTAS
+@CPF_ALUNO VARCHAR(20),
+@ID_CURSO CHAR(5),
+@ID_TRIMESTRE INT
+AS BEGIN
+SELECT *FROM NOTAS WHERE CPF=@CPF_ALUNO AND Id_Curso=@ID_CURSO AND Id_Trimestre=@ID_TRIMESTRE
+END
+GO
+
+
+
+
+
+CREATE PROC ATUALIZAR_NOTAS
+@COD_NOTAS INT,
+@NOTA DECIMAL,
+@DESCRICAO VARCHAR(30),
+@ID_CURSO CHAR(5),
+@CPF_ALUNO CHAR(8),
+@ID_TRIMESTRE INT,
+@MENSAGEM VARCHAR(100) OUTPUT
+AS BEGIN
+UPDATE NOTAS SET Nota=@NOTA,Descricao=@DESCRICAO WHERE CPF=@CPF_ALUNO AND Id_Curso=@ID_CURSO AND Id_Trimestre=@ID_TRIMESTRE and Cod_Notas=@COD_NOTAS
+SET @MENSAGEM='Notas Atualizadas'
+END
+GO
+
+
+
+
+CREATE PROC CONSULTA_NOTA_TRIMESTRE
+ (@CPF_ALU VARCHAR(20),
+  @TRIME INT)
+ AS 
+ BEGIN
+SELECT C.nome AS 'Curso',
+ (select AVG(N1.Nota) from NOTAS as n1 where n1.Cpf=AL.Cpf and n1.Id_Curso=C.Cod_Curso and n1.Id_Trimestre=n.Id_Trimestre)  AS 'Media',T.descricao
+ FROM MATRICULA M inner join ALUNO AL ON M.Cpf=AL.cpf INNER JOIN NOTAS N ON N.cpf=AL.cpf 
+ INNER JOIN CURSO C ON N.Id_Curso=C.Cod_Curso 
+ INNER JOIN TRIMESTRE T ON N.Id_Trimestre=T.Cod_Trimestre 
+ WHERE N.Cpf=@CPF_ALU AND N.Id_Trimestre=@TRIME
+ GROUP BY C.nome,AL.CPF,C.Cod_Curso,N.Id_Trimestre,T.descricao
+ end
+ GO
+
+
+
+
+
+
+ Create PROC CONSULTA_MEDIA_TRIMESTRES
+ (@CPF_ALU VARCHAR(20),
+ @msg varchar(100) output
+ )
+ AS 
+ BEGIN
+ if(not exists(Select * from ALUNO WHERE cpf=@cpf_ALU))
+ SET @msg='CPF não cadastrado'
+ else
+ begin
+ if(exists(Select * from ALUNO WHERE Cpf=@CPF_ALU))
+  set @msg='Dados Encontrados'
+SELECT distinct(C.Nome) AS 'Curso',
+ (select AVG(N1.Nota) from NOTAS as n1 where n1.cpf=AL.cpf and n1.Id_Curso=C.Cod_Curso and n1.Id_Trimestre=1)  AS 'Trimestre I',
+ (select AVG(N1.Nota) from NOTAS as n1 where n1.cpf=AL.cpf and n1.Id_Curso=C.Cod_Curso and n1.Id_Trimestre=2) AS 'Trimestre II',
+ (select AVG(N1.Nota) from NOTAS as n1 where n1.cpf=AL.cpf and n1.Id_Curso=C.Cod_Curso and n1.Id_Trimestre=3)as 'Trimestre III',
+ ((select AVG(N1.Nota) from NOTAS as n1 where n1.cpf=AL.cpf and n1.Id_Curso=C.Cod_Curso and n1.Id_Trimestre=1) +
+ (select AVG(N1.Nota) from NOTAS as n1 where n1.cpf=AL.cpf and n1.Id_Curso=C.Cod_Curso and n1.Id_Trimestre=2) +
+ (select AVG(N1.Nota) from NOTAS as n1 where n1.cpf=AL.cpf and n1.Id_Curso=C.Cod_Curso and n1.Id_Trimestre=3))/3 as 'Media Final'
+  FROM MATRICULA M inner join ALUNO AL ON M.cpf=AL.cpf INNER JOIN NOTAS N ON N.cpf=AL.cpf 
+ INNER JOIN CURSO C ON N.Id_Curso=C.Cod_Curso INNER JOIN TRIMESTRE T ON N.Id_Trimestre=T.Cod_Trimestre 
+ WHERE N.cpf=@CPF_ALU 
+ GROUP BY C.Nome,AL.cpf,C.Cod_Curso,N.Id_Trimestre
+ end
+ end
+  GO
+
+
+
+
+  CREATE PROC CONSULTA_NOTAS_DETALHADO
+ (@CPF VARCHAR(20),
+ @COD_CURSO CHAR(5),
+ @COD_TRI INT)
+ AS 
+ BEGIN
+ SELECT descricao,Nota
+ FROM  NOTAS
+ WHERE cpf=@CPF AND Id_Curso=@COD_CURSO AND Id_Trimestre=@COD_TRI
+ END
+ GO
